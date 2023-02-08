@@ -1,4 +1,7 @@
-ROOT_FOLDER: data/input
+ROOT_FOLDERS:
+  - data/input/proj_bar
+  - data/input/proj_foo
+
 OUTPUT_FOLDER: data/output
 
 EXCLUDE_FILES:
@@ -10,10 +13,8 @@ EXCLUDE_FOLDERS:
 
 # words in the path to prepend to the output file name
 QUALIFYER_NAMES:
-  - IAM Domains
-  - Access Management
+  - AM
   - CIAM
   - Directory Services
-  - IAM
   - IGA
   - PAM

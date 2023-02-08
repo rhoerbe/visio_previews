@@ -1,4 +1,5 @@
-ROOT_FOLDER: c:\Users\rhoerbe\OneDrive - KPMG\Documents\IAM\IAM Domains
+ROOT_FOLDERS:
+  - c:\Users\rhoerbe\OneDrive - KPMG\Documents\IAM\IAM Domains
 OUTPUT_FOLDER: data/IAM Domains
 
 EXCLUDE_FILES:
@@ -10,10 +11,10 @@ EXCLUDE_FOLDERS:
 
 # words in the path to prepend to the output file name
 QUALIFYER_NAMES:
-  - IAM Domains
-  - Access Management
+  - AM
+  - Authentication
   - CIAM
   - Directory Services
-  - IAM
   - IGA
+  - MFA
   - PAM

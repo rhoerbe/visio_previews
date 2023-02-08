@@ -12,7 +12,7 @@ import pandas as pd
 configfile = os.getenv('CONFIGFILE', default = Path('config_test.yaml'))
 with (open(configfile)) as fd:
     config = yaml.load(fd, Loader=yaml.BaseLoader)
-    ROOT_FOLDER = Path(config.get('ROOT_FOLDER', None))
+    ROOT_FOLDERS = config['ROOT_FOLDERS']
     OUTPUT_FOLDER = Path(config.get('OUTPUT_FOLDER', 'data'))
     EXCLUDE_FILES = config.get('EXCLUDE_FILES', None)
     EXCLUDE_FOLDERS = config.get('EXCLUDE_FOLDERS', None)
@@ -22,7 +22,15 @@ def main():
     OUTPUT_FOLDER.mkdir(parents=True, exist_ok=True)
     dir_mapping = {'Dir': [], 'Preview': [], 'Visio': []}
     visio = win32com.client.Dispatch("Visio.Application")
-    for root, dirs, files in os.walk(ROOT_FOLDER):
+    for root_folder in ROOT_FOLDERS:
+        process_dir_tree(Path(root_folder), visio, dir_mapping)
+    visio.Quit()
+    df = pd.DataFrame(dir_mapping)
+    df.to_excel(OUTPUT_FOLDER / 'preview2visio_mapping.xlsx')
+    print('done.')
+
+def process_dir_tree(root_folder, visio, dir_mapping):
+    for root, dirs, files in os.walk(root_folder):
         if root in EXCLUDE_FOLDERS:
             continue
         for file in files:
@@ -31,18 +39,15 @@ def main():
             elif file.endswith(".vsdx"):
                 visio_file = Path(root) / file
                 generate_preview(visio, visio_file, OUTPUT_FOLDER, dir_mapping)
-    visio.Quit()
-    df = pd.DataFrame(dir_mapping)
-    df.to_excel(OUTPUT_FOLDER / 'preview2visio_mapping.xlsx')
-    print('done.')
 
 
 def generate_preview(visio, visio_file, output_folder, dir_mapping: dict):
     def compute_image_filename() -> Path:
-        prefix = ''
         last_modified = datetime.fromtimestamp(os.path.getmtime(visio_file)).strftime('%Y%m%d')
-        for name in QUALIFYER_NAMES:
-            prefix = name + '_'
+        prefix = ''
+        for pathpart in visio_file.parent.parts:
+            if pathpart in QUALIFYER_NAMES:
+                prefix = prefix + pathpart + '_'
         filename = prefix + visio_file.stem + "_" + sanitize_filename(pagename) + last_modified + ".png"
         return Path(OUTPUT_FOLDER, filename).resolve()
 
