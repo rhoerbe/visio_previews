@@ -1,4 +1,5 @@
 import os
+import re
 import sys
 
 import win32com.client
@@ -8,7 +9,7 @@ from pathlib import Path
 import pandas as pd
 
 
-configfile = os.getenv('CONFIGFILE', default = Path('config.yaml'))
+configfile = os.getenv('CONFIGFILE', default = Path('config_test.yaml'))
 with (open(configfile)) as fd:
     config = yaml.load(fd, Loader=yaml.BaseLoader)
     ROOT_FOLDER = Path(config.get('ROOT_FOLDER', None))
@@ -19,7 +20,8 @@ with (open(configfile)) as fd:
 
 def main():
     OUTPUT_FOLDER.mkdir(parents=True, exist_ok=True)
-    dir_mapping = {}
+    dir_mapping = {'Dir': [], 'Preview': [], 'Visio': []}
+    visio = win32com.client.Dispatch("Visio.Application")
     for root, dirs, files in os.walk(ROOT_FOLDER):
         if root in EXCLUDE_FOLDERS:
             continue
@@ -28,35 +30,51 @@ def main():
                 pass
             elif file.endswith(".vsdx"):
                 visio_file = Path(root) / file
-                generate_preview(visio_file, OUTPUT_FOLDER, dir_mapping)
-    df = pd.DataFrame(dir_mapping, index=None)
-    df.to_excel(OUTPUT_FOLDER / 'file2dir_mapping')
+                generate_preview(visio, visio_file, OUTPUT_FOLDER, dir_mapping)
+    visio.Quit()
+    df = pd.DataFrame(dir_mapping)
+    df.to_excel(OUTPUT_FOLDER / 'preview2visio_mapping.xlsx')
+    print('done.')
 
 
-def generate_preview(visio_file, output_folder, dir_mapping: dict):
-    def compute_image_filename() -> str:
+def generate_preview(visio, visio_file, output_folder, dir_mapping: dict):
+    def compute_image_filename() -> Path:
         prefix = ''
         last_modified = datetime.fromtimestamp(os.path.getmtime(visio_file)).strftime('%Y%m%d')
         for name in QUALIFYER_NAMES:
             prefix = name + '_'
-        return Path(OUTPUT_FOLDER, prefix + visio_file.stem + "_" + page.Name + "_" + last_modified + ".png").resolve()
+        filename = prefix + visio_file.stem + "_" + sanitize_filename(pagename) + last_modified + ".png"
+        return Path(OUTPUT_FOLDER, filename).resolve()
 
-    visio = win32com.client.Dispatch("Visio.Application")
     try:
         doc = visio.Documents.Open(visio_file.resolve())  # win32com requires absolute path
-    except Exception:
-        print("visio.Documents.Open failed with " + visio_file.resolve(), file= sys.stderr)
+    except Exception as e:
+        print("visio.Documents.Open failed with " + str(visio_file.resolve()), file= sys.stderr)
+        print('skipping', file=sys.stderr)
+        doc.Close()
+        return
     print("processing " + str(visio_file))
     for i in range(1, doc.Pages.Count + 1):
         page = doc.Pages(i)
-        image_fn = compute_image_filename()
-        page.Export(image_fn)
-        #page.Export(Path('test.png').resolve())
         if doc.Pages.Count > 1:
-            print("exporting page " + str(doc.Pages(i).Name))
+            print("    page " + str(doc.Pages(i).Name))
+            pagename = page.Name + "_"
+        else:
+            pagename = ''
+        image_fn = compute_image_filename()
+        try:
+            page.Export(image_fn)
+        except Exception as e:
+            print("visio.Documents.Pages.Export(" + str(image_fn) + ')', file=sys.stderr)
+            raise e
     doc.Close()
-    visio.Quit()
-    dir_mapping[image_fn] = visio_file
+    dir_mapping['Dir'].append(OUTPUT_FOLDER)
+    dir_mapping['Preview'].append(image_fn.name)
+    dir_mapping['Visio'].append(visio_file)
+
+def sanitize_filename(filename: str) -> str:
+    return re.sub(r'[\\/:*?"<>|]', "_", filename)
+
 
 if __name__ == "__main__":
     main()
