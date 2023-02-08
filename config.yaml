@@ -1,0 +1,19 @@
+ROOT_FOLDER: c:\Users\rhoerbe\OneDrive - KPMG\Documents\IAM\IAM Domains
+OUTPUT_FOLDER: data/IAM Domains
+
+EXCLUDE_FILES:
+  - 'example.vsdx'
+
+# specify folder relative to ROOT_FOLDER, no wildcard
+EXCLUDE_FOLDERS:
+  - 'data\\input\\foo\\example'
+
+# words in the path to prepend to the output file name
+QUALIFYER_NAMES:
+  - IAM Domains
+  - Access Management
+  - CIAM
+  - Directory Services
+  - IAM
+  - IGA
+  - PAM
