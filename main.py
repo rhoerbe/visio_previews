@@ -22,12 +22,19 @@ def main():
     OUTPUT_FOLDER.mkdir(parents=True, exist_ok=True)
     dir_mapping = {'Dir': [], 'Preview': [], 'Visio': []}
     visio = win32com.client.Dispatch("Visio.Application")
+    close_open_documents(visio)
     for root_folder in ROOT_FOLDERS:
         process_dir_tree(Path(root_folder), visio, dir_mapping)
     visio.Quit()
     df = pd.DataFrame(dir_mapping)
     df.to_excel(OUTPUT_FOLDER / 'preview2visio_mapping.xlsx')
     print('done.')
+
+def close_open_documents(visio):
+    doc_count = visio.Documents.Count
+    if doc_count > 0:
+        print(f"There are {doc_count} open documents in Visio, close all before starting this program.")
+        sys.exit(1)
 
 def process_dir_tree(root_folder, visio, dir_mapping):
     for root, dirs, files in os.walk(root_folder):
@@ -72,6 +79,7 @@ def generate_preview(visio, visio_file, output_folder, dir_mapping: dict):
         except Exception as e:
             print("visio.Documents.Pages.Export(" + str(image_fn) + ')', file=sys.stderr)
             raise e
+    doc.Saved = True
     doc.Close()
     dir_mapping['Dir'].append(OUTPUT_FOLDER)
     dir_mapping['Preview'].append(image_fn.name)
