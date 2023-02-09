@@ -68,6 +68,7 @@ def generate_preview(visio, visio_file, output_folder, dir_mapping: dict):
     print("processing " + str(visio_file))
     for i in range(1, doc.Pages.Count + 1):
         page = doc.Pages(i)
+        page.ResizeToFitContents()
         if doc.Pages.Count > 1:
             print("    page " + str(doc.Pages(i).Name))
             pagename = page.Name + "_"
